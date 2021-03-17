@@ -1,7 +1,10 @@
 package it.polito.tdp.indovinaNumero;
 
 import java.net.URL;
+import java.security.InvalidParameterException;
 import java.util.ResourceBundle;
+
+import it.polito.tdp.indovinaNumero.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -11,11 +14,11 @@ import javafx.scene.layout.HBox;
 
 public class FXMLController {
 
-	private final int NMAX = 100;
-	private final int TMAX = 8;
-	private int numSegreto;
-	private int tentativiFatti;
-	private boolean inGioco=false;
+	private Model model;
+	
+	public void setModel(Model model) {
+		this.model=model;
+	}
 	
     @FXML
     private ResourceBundle resources;
@@ -43,10 +46,18 @@ public class FXMLController {
 
     @FXML
     void doNuovaPartita(ActionEvent event) {
-    	this.tentativiFatti=0;
-    	this.inGioco= true;
-    	this.numSegreto = (int)(Math.random()*NMAX)+1;
-    	this.txtNumeroTentativo.setText(Integer.toString(TMAX));
+    		
+    	// con mvc VA AGGIUNTO
+    		this.model.nuovaPartita();
+    		
+    	 /* // gestione nuova partita VIENE SPOSTATA IN MODELLO
+    			this.tentativiFatti=0;
+    	    	this.inGioco= true;
+    	    	this.numSegreto = (int)(Math.random()*NMAX)+1;
+    	*/
+    	
+    	// gestione INTERFACCIA RIMANE SU CONTROLLER
+    	this.txtNumeroTentativo.setText(Integer.toString(this.model.getTMAX()));
     	this.hBox.setDisable(false);
     	this.txtRisposta.setText("");
     }
@@ -63,22 +74,38 @@ public class FXMLController {
     		txtRisposta.appendText("Inserire un numero tra 1 e 100 \n");
     		return;
     	}
-    	this.tentativiFatti++;
-    	this.txtNumeroTentativo.setText(Integer.toString(TMAX-this.tentativiFatti));
-    	if(numero==this.numSegreto) {
-    		this.txtRisposta.appendText("Hai indovinato il numero segreto, "+this.numSegreto+", con "+this.tentativiFatti+" tentativi.");
-    		this.hBox.setDisable(true);
-    		this.inGioco=false;
-    		return;	
-    	}
-    	if(this.tentativiFatti==TMAX) {
-    		this.txtRisposta.appendText("Hai perso, hai esaurito i tentativi a tua disposizione.\nIl numero da indovinare era "+this.numSegreto+" .");
-    		this.inGioco=false;
+    	
+    	// dobbiamo valutare questo numero, se è giusto ecc
+    	// spostiamo questi controlli nel modello e non più nel controllore
+    	
+    	int result;
+    	
+    	// dobbiamo inserire una serie di try catch perchè il metodo che abbiamo creato genera eccezioni
+    	try {
+    	// passiamo il numero inserito dall'utente al modello perché lo controlli
+    		
+    	result= this.model.controllo(numero);
+    	
+    		//numero non valido o partita finita
+    	} catch (IllegalStateException se) {
+    		this.txtRisposta.appendText(se.getMessage());
+    		this.txtNumeroTentativo.setText("0");
     		this.hBox.setDisable(true);
     		return;
-  
+    	} catch (InvalidParameterException pe) {
+    		this.txtRisposta.appendText(pe.getMessage());
+    		return;
     	}
-    	if(numero>this.numSegreto) {
+    	
+    	// numero valido
+    	this.txtNumeroTentativo.setText(Integer.toString(this.model.getTMAX()-this.model.getTentativiFatti()));
+    	
+    	if(result==0) {
+    		this.txtRisposta.appendText("Hai indovinato il numero segreto, "+this.model.getNumSegreto()+", con "+this.model.getTentativiFatti()+" tentativi.");
+    		this.hBox.setDisable(true);
+    		return;	
+    	}
+    	if(result==1) {
     		this.txtRisposta.appendText("Il numero inserito, "+numero+", è più grande di quello da indovinare. \n");
     	}
     	else {
